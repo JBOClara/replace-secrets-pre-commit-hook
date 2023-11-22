@@ -1,0 +1,8 @@
+- id: replace-secret
+  name: replace secret names for their arn
+  description: Prevent commiting non-fqdn AWS secret (e.g. "/secret-name")
+  types: [python]
+  language: python
+  pass_filenames: true
+  args: ['']
+  entry: replace-secret
