@@ -10,3 +10,4 @@ covdefaults
 coverage
 pytest
 moto==4.2.9
+pytest-env
