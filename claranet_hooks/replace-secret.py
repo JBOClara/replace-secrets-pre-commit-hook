@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Sequence
+import argparse
+
 import re
 import os
 import boto3
@@ -95,7 +99,7 @@ session = boto3.Session(
     aws_access_key_id=aws_access_key_id,
     aws_secret_access_key=aws_secret_access_key,
     aws_session_token=aws_security_token,
-    region_name='us-east-1'  # or your preferred region
+    region_name=aws_region  # or your preferred region
 )
 
 # show caller-identity
@@ -106,32 +110,43 @@ identity = sts_client.get_caller_identity()
 # Create a client for the AWS Secrets Manager
 sm_client = session.client('secretsmanager')
 
-# Placeholder pattern
-# placeholder_pattern = '/dow/db/password/'
-yaml_files = glob.glob(f'chart/chart-wordpress-base/{env}/*/*/values.yaml') + glob.glob(f'chart/chart-wordpress-base/{env}/*/*/*-values.yaml')
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'values-base-path', nargs='1',
+        help='Path to the values.yaml file',
+    )
+    args = parser.parse_args(argv)
+    values_base_path = args.values_base_path[0]
+    # Placeholder pattern
+    # placeholder_pattern = '/dow/db/password/'
+    yaml_files = glob.glob(f'{values_base_path}/{env}/*/*/values.yaml') + glob.glob(f'{values_base_path}/{env}/*/*/*-values.yaml')
 
+    for yaml_file in yaml_files:
 
-for yaml_file in yaml_files:
+        try:
+            # Load the YAML file
+            with open(yaml_file, 'r') as file:
+                data = yaml.load(file)
 
-    try:
-        # Load the YAML file
-        with open(yaml_file, 'r') as file:
-            data = yaml.load(file)
+            # Replace secrets with ARN in the data
+            if replace_secrets_with_arn(data, sm_client, yaml_file) is None:
+                exit(1)
 
-        # Replace secrets with ARN in the data
-        if replace_secrets_with_arn(data, sm_client, yaml_file) is None:
+            if data is None or data == {None: {None: None}} or data == {None: None}:
+                continue
+            # Write the data back to the file
+            with open(yaml_file, 'w') as file:
+                yaml.dump(data, file)
+        except AttributeError as e:
+            print(f"Unmanaged attribute error : {e}")
+            raise e
+        except Exception as e:
+            print(f"Erreur lors de l'analyse du fichier YAML : {e}")
+            print("Veuillez vérifier la syntaxe de votre fichier YAML.")
+            error_line_number = e.problem_mark.line
+            print_error_context(yaml_file, error_line_number)
             exit(1)
 
-        if data is None or data == {None: {None: None}} or data == {None: None}:
-            continue
-        # Write the data back to the file
-        with open(yaml_file, 'w') as file:
-            yaml.dump(data, file)
-    except AttributeError as e:
-        exit(1)
-    except Exception as e:
-        print(f"Erreur lors de l'analyse du fichier YAML : {e}")
-        print("Veuillez vérifier la syntaxe de votre fichier YAML.")
-        error_line_number = e.problem_mark.line
-        print_error_context(yaml_file, error_line_number)
-        exit(1)
+if __name__ == '__main__':
+    raise SystemExit(main())
