@@ -9,3 +9,4 @@ six==1.16.0
 covdefaults
 coverage
 pytest
+moto==4.2.9

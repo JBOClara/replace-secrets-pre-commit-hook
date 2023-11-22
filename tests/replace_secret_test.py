@@ -1,4 +1,5 @@
 from __future__ import annotations
+from moto import mock_sts
 
 from unittest.mock import patch, MagicMock
 from claranet_hooks.replace_secret import replace_secrets_with_arn, filter_secrets_with_arn
@@ -7,6 +8,7 @@ def test_filter_secrets_with_arn():
     assert filter_secrets_with_arn('ref+awssecrets://arn:aws:secretsmanager:') == False
     assert filter_secrets_with_arn('ref+awssecrets://secret_name') == True
 
+@mock_sts
 @patch('replace_secret.boto3')
 def test_replace_secrets_with_arn(mock_boto3):
     mock_sm_client = MagicMock()
